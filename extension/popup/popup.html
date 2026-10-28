@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FocusGain Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <div class="logo-group">
+        <div class="logo-icon">⚡</div>
+        <div>
+          <h2>FocusGain</h2>
+          <span class="subtext">Enterprise Focus Shield</span>
+        </div>
+      </div>
+      <a href="http://localhost:3000" target="_blank" class="web-link" title="Open Web App">↗</a>
+    </header>
+
+    <!-- Master Switch: Study Whitelist Mode -->
+    <div class="card feature-card">
+      <div class="feature-header">
+        <div>
+          <h3>Study Whitelist Mode</h3>
+          <p class="description">Block all websites except approved study tools</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="study-toggle">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div id="status-pill" class="status-pill inactive">
+        <span class="dot"></span> <span id="status-text">Inactive</span>
+      </div>
+    </div>
+
+    <!-- Feed Shield Switch -->
+    <div class="card feature-card">
+      <div class="feature-header">
+        <div>
+          <h3>Targeted Feed Filter</h3>
+          <p class="description">Hides Reels, Shorts, and Explore algorithms</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="shield-toggle" checked>
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="stats-row">
+        <span>Protected platforms:</span>
+        <span class="badges">YT • IG • FB • SC</span>
+      </div>
+    </div>
+
+    <!-- Whitelist Manager Accordion -->
+    <div class="card whitelist-section">
+      <div class="section-title-row">
+        <h4>Allowed Domains (<span id="whitelist-count">0</span>)</h4>
+        <button id="add-current-tab" class="btn-sm">+ Current Site</button>
+      </div>
+      <div class="input-row">
+        <input type="text" id="domain-input" placeholder="e.g. canvas.instructure.com">
+        <button id="add-btn" class="btn-icon">+</button>
+      </div>
+      <ul id="domain-list" class="domain-list"></ul>
+    </div>
+
+    <footer class="footer">
+      <button id="launch-timer" class="btn-primary">Open Focus Timer</button>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
