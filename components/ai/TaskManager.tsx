@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Sparkles, CheckCircle2, Trash2, HelpCircle, ArrowUpRight, Flame, ShieldAlert, BookOpen, AlertTriangle } from 'lucide-react';
+import { Plus, Sparkles, CheckCircle2, Trash2, Key, HelpCircle, ArrowUpRight, Flame, ShieldAlert, BookOpen, AlertTriangle, ExternalLink, Check, Eye, EyeOff } from 'lucide-react';
 import { ScoredTaskResult } from '@/app/api/ai/score-tasks/route';
 import { QuizPayload } from '@/app/api/ai/generate-quiz/route';
 import { QuizRunner } from './QuizRunner';
@@ -32,38 +32,49 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   const [quizTaskName, setQuizTaskName] = useState<string>('');
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState<boolean>(false);
 
-  // Load from localStorage on mount
+  // Gemini API Key management
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [showKeyInput, setShowKeyInput] = useState<boolean>(false);
+  const [keySavedNotification, setKeySavedNotification] = useState<boolean>(false);
+  const [maskKey, setMaskKey] = useState<boolean>(true);
+
+  // Load tasks and API key from localStorage on mount
   useEffect(() => {
     try {
+      const storedKey = localStorage.getItem('focusgain_gemini_key');
+      if (storedKey) {
+        setGeminiApiKey(storedKey);
+      }
+
       const saved = localStorage.getItem('focusgain_tasks');
       if (saved) {
         setTasks(JSON.parse(saved));
       } else {
-        // Default high-leverage initial seed tasks
+        // High-cognitive diverse starter topics
         const initial: TaskItem[] = [
           {
             id: 'task-1',
-            task_name: 'Implement OAuth PKCE flow & Supabase Row-Level Security',
+            task_name: 'Analyze Cellular Respiration and Krebs Cycle Bioenergetics',
             score: 9,
             status: 'accepted',
-            category: 'Deep Work',
-            reasoning: 'Critical architectural security milestone with zero distraction risk.',
+            category: 'Biology & Medicine',
+            reasoning: 'Rigorous biochemical mechanics with deep molecular cause-effect pathways.',
           },
           {
             id: 'task-2',
-            task_name: 'Analyze distributed systems consensus & Paxos invariants',
+            task_name: 'Investigate the Economic and Political Causes of the French Revolution',
             score: 10,
             status: 'accepted',
-            category: 'Deliberate Practice',
-            reasoning: 'High cognitive challenge strengthening core distributed principles.',
+            category: 'History & Social Science',
+            reasoning: 'Rich multi-variable historical synthesis examining institutional collapse.',
           },
           {
             id: 'task-3',
-            task_name: 'Optimize Web Audio procedural synthesis buffer latencies',
-            score: 8,
+            task_name: 'Solve Multivariable Calculus Line Integrals and Green Theorem Proofs',
+            score: 9,
             status: 'accepted',
-            category: 'Deep Work',
-            reasoning: 'Hands-on performance profiling with measurable memory outcomes.',
+            category: 'Mathematics',
+            reasoning: 'Active problem solving building deep analytical mathematical intuition.',
           },
         ];
         setTasks(initial);
@@ -73,6 +84,25 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       console.error(e);
     }
   }, []);
+
+  const handleSaveApiKey = () => {
+    try {
+      localStorage.setItem('focusgain_gemini_key', geminiApiKey.trim());
+      setKeySavedNotification(true);
+      setTimeout(() => setKeySavedNotification(false), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearApiKey = () => {
+    try {
+      localStorage.removeItem('focusgain_gemini_key');
+      setGeminiApiKey('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Save to localStorage
   const saveTasks = (newTasks: TaskItem[]) => {
@@ -84,7 +114,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     }
   };
 
-  // Submit tasks to Gemini AI evaluation
+  // Submit tasks to AI evaluation
   const handleEvaluateBatch = async () => {
     const rawLines = inputTaskList
       .split('\n')
@@ -99,8 +129,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     try {
       const res = await fetch('/api/ai/score-tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: rawLines.slice(0, 10) }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(geminiApiKey ? { 'x-gemini-api-key': geminiApiKey } : {}),
+        },
+        body: JSON.stringify({
+          tasks: rawLines.slice(0, 10),
+          userApiKey: geminiApiKey || undefined,
+        }),
       });
       const data = await res.json();
 
@@ -163,10 +199,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     try {
       const res = await fetch('/api/ai/generate-quiz', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(geminiApiKey ? { 'x-gemini-api-key': geminiApiKey } : {}),
+        },
         body: JSON.stringify({
           taskName: task.task_name,
           taskId: task.id,
+          userApiKey: geminiApiKey || undefined,
         }),
       });
       const data = await res.json();
@@ -195,6 +235,105 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         />
       )}
 
+      {/* Gemini AI Key Config Banner */}
+      <div className="p-4 rounded-2xl glass-card border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <Key className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">Google Gemini Engine</span>
+              {geminiApiKey ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Gemini Live Key Active
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  Domain-Aware Cognitive Engine
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {geminiApiKey
+                ? 'Generating real-time, topic-tailored questions and diagnostics via Gemini 1.5 Flash.'
+                : 'Paste a free Gemini API key to activate live generative 20-MCQ synthesis for any subject.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowKeyInput(!showKeyInput)}
+          className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold self-start md:self-auto transition-all"
+        >
+          {showKeyInput ? 'Hide Settings' : geminiApiKey ? 'Update Key' : '🔑 Enter Gemini Key'}
+        </button>
+      </div>
+
+      {/* Expandable Key Input Panel */}
+      {showKeyInput && (
+        <div className="p-4 rounded-2xl bg-slate-900/90 border border-indigo-500/30 space-y-3 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label className="text-xs font-bold text-slate-200 block">Gemini API Key</label>
+              <span className="text-[11px] text-slate-400">
+                Get a free key in 30 seconds at{' '}
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-400 hover:underline inline-flex items-center gap-0.5 font-medium"
+                >
+                  aistudio.google.com/apikey <ExternalLink className="w-3 h-3" />
+                </a>
+              </span>
+            </div>
+
+            {keySavedNotification && (
+              <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Key Saved!
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type={maskKey ? 'password' : 'text'}
+                placeholder="AIzaSy..."
+                value={geminiApiKey}
+                onChange={e => setGeminiApiKey(e.target.value)}
+                className="w-full pl-3 pr-10 py-2 bg-slate-950 border border-white/10 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => setMaskKey(!maskKey)}
+                className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+              >
+                {maskKey ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            <button
+              onClick={handleSaveApiKey}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md"
+            >
+              Save Key
+            </button>
+
+            {geminiApiKey && (
+              <button
+                onClick={handleClearApiKey}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-white/5 text-xs font-semibold"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Input Batch Section */}
       <div className="p-6 rounded-3xl glass-card border border-white/10">
         <div className="flex items-center justify-between mb-3">
@@ -203,9 +342,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">Gemini Cognitive Task Evaluator</h3>
+              <h3 className="font-bold text-white text-base">Cognitive Task Evaluator</h3>
               <p className="text-xs text-slate-400">
-                Submit up to 10 tasks. Low-productivity items (&lt; 5/10) are filtered out and replaced.
+                Submit up to 10 tasks in any field (Biology, History, Math, Physics, Coding, Literature). Low-productivity items (&lt; 5/10) are filtered and replaced.
               </p>
             </div>
           </div>
@@ -215,7 +354,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           rows={3}
           value={inputTaskList}
           onChange={e => setInputTaskList(e.target.value)}
-          placeholder={`Enter one task per line (up to 10 tasks). Examples:\n1. Solve 3 LeetCode dynamic programming problems\n2. Read paper on speculative decoding in LLMs\n3. Scroll Twitter feeds (AI will reject & replace this)`}
+          placeholder={`Enter one study goal per line. Examples:\n• Analyze the French Revolution economic causes and Jacobin constitution\n• Study Cellular Respiration, Glycolysis and ATP synthase\n• Solve Multivariable Calculus line integrals and Stokes Theorem\n• Scroll random TikTok videos (AI will reject & replace this)`}
           className="w-full p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-all font-mono"
         ></textarea>
 
@@ -291,13 +430,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             Active Study Objectives ({tasks.filter(t => t.status === 'accepted').length})
           </h4>
           <span className="text-xs text-slate-500">
-            Marking "Done" immediately launches a 20-MCQ test
+            Marking "Done" immediately synthesizes a 20-MCQ test on that specific topic
           </span>
         </div>
 
         {tasks.length === 0 ? (
           <div className="text-center py-12 rounded-3xl border border-dashed border-white/10 text-slate-500 text-xs">
-            No active focus tasks yet. Enter your goals above to have Gemini score and refine them.
+            No active focus tasks yet. Enter your goals above to have AI score and refine them.
           </div>
         ) : (
           tasks.map(task => {
@@ -323,7 +462,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         ? 'bg-emerald-500 border-emerald-500 text-white'
                         : 'border-slate-600 hover:border-indigo-400 text-transparent'
                     }`}
-                    title={isCompleted ? 'Completed' : 'Mark Done & Launch 20-MCQ Quiz'}
+                    title={isCompleted ? 'Completed' : 'Mark Done & Launch 20-MCQ Quiz on this topic'}
                   >
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
@@ -373,7 +512,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   <button
                     onClick={() => handleCompleteTask(task)}
                     className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs flex items-center gap-1 font-semibold"
-                    title="Take 20-MCQ Quiz"
+                    title={`Take 20-MCQ Quiz on "${task.task_name}"`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Quiz</span>
@@ -399,7 +538,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             <Sparkles className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-3" />
             <h4 className="font-bold text-white text-base">Synthesizing 20-Question Quiz</h4>
             <p className="text-xs text-slate-400 mt-1">
-              Gemini is formulating comprehensive conceptual and practical questions for "{quizTaskName}"...
+              Formulating questions strictly on the subject: <strong className="text-indigo-300 block mt-1">"{quizTaskName}"</strong>
             </p>
           </div>
         </div>

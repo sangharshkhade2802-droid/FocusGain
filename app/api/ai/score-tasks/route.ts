@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const rawTasks: string[] = body.tasks || [];
+    const userApiKey: string | undefined = req.headers.get('x-gemini-api-key') || body.userApiKey;
 
     if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
       return NextResponse.json(
@@ -27,9 +28,9 @@ export async function POST(req: Request) {
 
     let evaluatedTasks: ScoredTaskResult[] = [];
 
-    if (hasGeminiKey()) {
+    if (hasGeminiKey(userApiKey)) {
       try {
-        const model = getGeminiModel('gemini-1.5-flash');
+        const model = getGeminiModel(userApiKey, 'gemini-1.5-flash');
         if (model) {
           const prompt = `
 You are an executive productivity coach and cognitive performance evaluator.

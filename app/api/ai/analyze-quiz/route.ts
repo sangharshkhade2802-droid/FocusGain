@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     const taskName: string = body.taskName || 'Subject';
     const questions: QuizQuestion[] = body.questions || [];
     const userAnswers: Record<number, number> = body.userAnswers || {}; // questionId -> chosenIndex
+    const userApiKey: string | undefined = req.headers.get('x-gemini-api-key') || body.userApiKey;
 
     if (!questions || questions.length === 0) {
       return NextResponse.json({ error: 'Questions payload missing' }, { status: 400 });
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       const isCorrect = chosen === q.correctIndex;
       if (isCorrect) correctCount++;
 
-      const subtopic = q.subtopic || 'General';
+      const subtopic = q.subtopic || 'Core Concept';
       if (!topicPerformance[subtopic]) {
         topicPerformance[subtopic] = { correct: 0, total: 0 };
       }
@@ -62,19 +63,19 @@ export async function POST(req: Request) {
 
     let analysis: QuizAnalysisResult | null = null;
 
-    if (hasGeminiKey()) {
+    if (hasGeminiKey(userApiKey)) {
       try {
-        const model = getGeminiModel('gemini-1.5-flash');
+        const model = getGeminiModel(userApiKey, 'gemini-1.5-flash');
         if (model) {
           const prompt = `
-You are a senior cognitive performance analyst and adaptive learning tutor.
-A student just completed a 20-question diagnostic quiz on "${taskName}".
+You are a senior academic diagnostic analyst and specialized learning advisor.
+A student just completed a 20-question diagnostic quiz specifically on "${taskName}".
 Diagnostic Data:
 - Score: ${correctCount}/${questions.length} (${percentage}%)
 - Identified Strong Areas: ${JSON.stringify(calculatedStrong)}
 - Identified Weak Areas: ${JSON.stringify(calculatedWeak)}
 
-Provide a diagnostic learning evaluation with actionable study recommendations.
+Provide a diagnostic learning evaluation with targeted study recommendations strictly relevant to "${taskName}".
 Strictly return a JSON object with this exact schema:
 {
   "executiveSummary": string,
@@ -109,7 +110,7 @@ Strictly return a JSON object with this exact schema:
               strongAreas: parsed.strongAreas?.length ? parsed.strongAreas : calculatedStrong,
               contentRecommendations: parsed.contentRecommendations || [],
               executiveSummary: parsed.executiveSummary,
-              nextMilestone: parsed.nextMilestone || 'Complete next 50-minute deliberate practice sprint.',
+              nextMilestone: parsed.nextMilestone || 'Complete next 25-minute deliberate practice sprint.',
             };
           }
         }
@@ -123,40 +124,42 @@ Strictly return a JSON object with this exact schema:
         score: percentage,
         totalQuestions: questions.length,
         correctAnswers: correctCount,
-        weakAreas: calculatedWeak.length > 0 ? calculatedWeak : ['Deep Architectural Edge Cases'],
-        strongAreas: calculatedStrong.length > 0 ? calculatedStrong : ['Fundamental Theory & Core Invariants'],
+        weakAreas: calculatedWeak.length > 0 ? calculatedWeak : [`Advanced Invariant Analysis in ${taskName}`],
+        strongAreas: calculatedStrong.length > 0 ? calculatedStrong : [`Core Foundational Principles of ${taskName}`],
         executiveSummary: percentage >= 80
-          ? `Outstanding cognitive retention! You demonstrated high proficiency across ${cleanSummary(taskName)} with exceptional mastery of core architectural invariants.`
+          ? `Outstanding retention! You demonstrated high proficiency across "${taskName}" with strong conceptual mastery.`
           : percentage >= 60
-          ? `Solid foundation established in ${cleanSummary(taskName)}. Targeted review of boundary failure cases will accelerate you toward mastery.`
-          : `Fundamental gaps detected in ${cleanSummary(taskName)}. Prioritize the recommended conceptual deep-dives before advancing to higher complexity tasks.`,
+          ? `Solid foundation established in "${taskName}". Targeted review of weaker subtopics will elevate you to mastery.`
+          : `Gaps identified in foundational understanding of "${taskName}". Prioritize the curated study guides below before moving to higher difficulty levels.`,
         contentRecommendations: [
           {
-            title: `${taskName}: Official Technical Documentation & Deep-Dive Reference`,
+            title: `${taskName}: Comprehensive Study Guide & Reference Materials`,
             type: 'documentation',
-            url: `https://developer.mozilla.org/`,
-            description: `Authoritative specifications and standard idioms covering edge-case behaviors.`,
+            url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(taskName)}`,
+            description: `Authoritative conceptual overview and historical/theoretical context for ${taskName}.`,
           },
           {
-            title: `Systems Architecture & Cognitive Retentive Patterns for ${taskName}`,
+            title: `Advanced Academic Papers & Deep Dives: ${taskName}`,
             type: 'article',
-            url: `https://arxiv.org/`,
-            description: `In-depth structural breakdown of error mitigations and optimal invariant management.`,
+            url: `https://scholar.google.com/scholar?q=${encodeURIComponent(taskName)}`,
+            description: `Peer-reviewed analysis exploring experimental proofs, methodologies, and edge cases in ${taskName}.`,
           },
           {
-            title: `Masterclass Walkthrough: Practical Implementation of ${taskName}`,
+            title: `Visual Masterclass Walkthrough: ${taskName}`,
             type: 'video',
-            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(taskName + ' masterclass tutorial')}`,
-            description: `End-to-end breakdown by industry specialists detailing failure recovery protocols.`,
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(taskName + ' masterclass tutorial lecture')}`,
+            description: `Structured lecture walkthrough breaking down foundational principles and practical problem solving.`,
           },
           {
-            title: `Deliberate Practice Sandbox & Self-Test Lab`,
+            title: `Deliberate Practice & Flashcard Self-Assessment`,
             type: 'practice',
-            url: `#`,
-            description: `Hands-on isolated scenario simulations to reinforce weak boundary conditions.`,
+            url: `https://quizlet.com/search?query=${encodeURIComponent(taskName)}`,
+            description: `Spaced-repetition reinforcement to turn weak conceptual subtopics into verified recall.`,
           },
         ],
-        nextMilestone: percentage >= 80 ? 'Advance to Next Level Task or Lead a Study Room' : 'Review targeted weak subtopics in a 25-minute Pomodoro session',
+        nextMilestone: percentage >= 80
+          ? 'Advance to Next Level Topic or Lead a Study Room'
+          : `Review targeted weak subtopics in a 25-minute Pomodoro session on ${taskName}`,
       };
     }
 
@@ -171,8 +174,4 @@ Strictly return a JSON object with this exact schema:
       { status: 500 }
     );
   }
-}
-
-function cleanSummary(name: string) {
-  return name.replace(/[^\w\s-]/gi, '').trim();
 }

@@ -1,15 +1,22 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+const envApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
 
-export const getGeminiModel = (modelName = 'gemini-1.5-flash') => {
-  if (!apiKey) {
+export const getGeminiModel = (customKey?: string, modelName = 'gemini-1.5-flash') => {
+  const key = customKey?.trim() || envApiKey;
+  if (!key || key === 'your-gemini-api-key' || key.length < 5) {
     return null;
   }
-  const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: modelName });
+  try {
+    const genAI = new GoogleGenerativeAI(key);
+    return genAI.getGenerativeModel({ model: modelName });
+  } catch (err) {
+    console.error('Error instantiating GoogleGenerativeAI:', err);
+    return null;
+  }
 };
 
-export const hasGeminiKey = (): boolean => {
-  return !!apiKey && apiKey !== 'your-gemini-api-key' && apiKey.length > 5;
+export const hasGeminiKey = (customKey?: string): boolean => {
+  const key = customKey?.trim() || envApiKey;
+  return !!key && key !== 'your-gemini-api-key' && key.length > 5;
 };

@@ -52,13 +52,18 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
   const handleSubmitQuiz = async () => {
     setIsAnalyzing(true);
     try {
+      const storedKey = typeof window !== 'undefined' ? localStorage.getItem('focusgain_gemini_key') || '' : '';
       const res = await fetch('/api/ai/analyze-quiz', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedKey ? { 'x-gemini-api-key': storedKey } : {}),
+        },
         body: JSON.stringify({
           taskName,
           questions: quiz.questions,
           userAnswers: selectedAnswers,
+          userApiKey: storedKey || undefined,
         }),
       });
       const data = await res.json();
